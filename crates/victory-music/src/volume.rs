@@ -1,7 +1,6 @@
 //! Spotify's own volume in the system mixer (what Windows' volume
 //! mixer shows per app), on the default output device. Setting it changes
-//! only how loud that app is; its audio is not touched. A browser playing
-//! the music gets the level for all of its tabs.
+//! only how loud that app is; its audio is not touched.
 //!
 //! Windows remembers an app's level after it closes, so every level we
 //! change is put back when the [`AppVolume`] goes (or with
