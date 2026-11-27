@@ -16,6 +16,7 @@ use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThre
 
 use crate::media::{Command, Media};
 use crate::mix::{Mixer, Scene, Settings};
+use crate::space::Panner;
 use crate::ui::{Fonts, Phone, PhoneState, Track};
 use crate::volume::AppVolume;
 
@@ -116,6 +117,7 @@ fn run(shared: &Mutex<Shared>) {
     };
     let mut volume = AppVolume::new();
     let mut mixer = Mixer::new(Settings::default());
+    let mut panner = Panner::new();
     let mut keys = Keys::default();
     let started = Instant::now();
     let mut last = Instant::now();
@@ -189,6 +191,13 @@ fn run(shared: &Mutex<Shared>) {
             && !app.is_empty()
         {
             volume.set(&app, level);
+        }
+        // Where the music comes from: the camera and the vehicle are not
+        // read from the title yet, so the balance stays centred.
+        if let Some((left, right)) = panner.step(&scene, dt)
+            && !app.is_empty()
+        {
+            volume.set_balance(&app, left, right);
         }
 
         // Slide.

@@ -11,6 +11,7 @@
 
 pub mod apps;
 pub mod mix;
+pub mod space;
 pub mod ui;
 
 #[cfg(windows)]

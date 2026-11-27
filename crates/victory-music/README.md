@@ -30,6 +30,7 @@ A phone laid over the title's picture that drives the player's own Spotify
 ```powershell
 cargo run -p victory-music --example music_probe -- now     # what Spotify plays
 cargo run -p victory-music --example music_probe -- scene   # Spotify's volume following a scripted scene
+cargo run -p victory-music --example music_probe -- around  # the music circling you (headphones)
 cargo run -p victory-music --example phone_preview -- phone.png   # the phone, drawn to a PNG (any platform)
 ```
 
@@ -40,6 +41,10 @@ cargo run -p victory-music --example phone_preview -- phone.png   # the phone, d
 * `mix` and `volume`: the scene sets Spotify's own volume in Windows' mixer
   (in a vehicle, under dialogue, walking away, paused). Spotify's audio is
   never captured or altered. The scene is not read from the title yet.
+* `space`: outside the vehicle, its radio is heard from its side of the
+  camera (and a little dimmer from behind), through Spotify's left/right
+  balance in the same mixer. Only the balance a stereo pair gives: no
+  front/back cues or muffling, which would need the audio itself.
 * `ui`: the phone is drawn on the CPU (tiny-skia, fontdue); what stays still
   is kept, so a frame costs about 1 ms.
 * `service`: the thread behind it; `victory-gpu::overlay` lays the picture

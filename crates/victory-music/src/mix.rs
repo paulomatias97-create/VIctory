@@ -22,6 +22,9 @@ pub struct Scene {
     /// Metres from the player to the vehicle playing the music (ignored in
     /// it).
     pub distance: f32,
+    /// Where the vehicle playing the music is, seen from the camera, in
+    /// radians: 0 ahead, positive to the right, ±π behind (ignored in it).
+    pub bearing: f32,
 }
 
 impl Default for Scene {
@@ -32,6 +35,7 @@ impl Default for Scene {
             dialogue: false,
             paused: false,
             distance: 0.0,
+            bearing: 0.0,
         }
     }
 }

@@ -5,7 +5,11 @@
 //! cargo run -p victory-music --example music_probe -- now
 //! cargo run -p victory-music --example music_probe -- next | previous | toggle
 //! cargo run -p victory-music --example music_probe -- scene
+//! cargo run -p victory-music --example music_probe -- around
 //! ```
+//!
+//! `around` circles the music around the player (left, ahead, right,
+//! behind) through Spotify's balance: use headphones.
 //!
 //! `scene` plays a scripted half minute against the real Spotify: the radio
 //! on in a vehicle, a line of dialogue, walking away, coming back, a pause.
@@ -52,6 +56,10 @@ fn main() {
         return;
     }
     show(&media);
+    if what == "around" {
+        around(&media);
+        return;
+    }
     if what != "scene" {
         return;
     }
@@ -126,6 +134,59 @@ fn main() {
     }
     volume.restore(&app);
     println!("volume put back");
+}
+
+/// The vehicle with the music, 6 m away, circling the player once in 16
+/// seconds: left, ahead, right, behind, left. Headphones make it plain.
+#[cfg(windows)]
+fn around(media: &victory_music::media::Media) {
+    use std::time::{Duration, Instant};
+    use victory_music::mix::{Mixer, Scene, Settings};
+    use victory_music::space::Panner;
+    use victory_music::volume::AppVolume;
+
+    let Some(app) = media.now_playing(false).map(|n| n.app) else {
+        return;
+    };
+    let mut volume = AppVolume::new();
+    let mut mixer = Mixer::new(Settings::default());
+    let mut panner = Panner::new();
+    let dt = 1.0 / 30.0;
+    let start = Instant::now();
+    let total = 16.0f32;
+    let mut said = String::new();
+    while start.elapsed().as_secs_f32() < total {
+        let t = start.elapsed().as_secs_f32() / total;
+        // From the left (-90 degrees), clockwise round to the left again.
+        let bearing = -std::f32::consts::FRAC_PI_2 + t * std::f32::consts::TAU;
+        let scene = Scene {
+            in_vehicle: false,
+            distance: 6.0,
+            bearing,
+            ..Scene::default()
+        };
+        if let Some(level) = mixer.step(&scene, dt) {
+            volume.set(&app, level);
+        }
+        if let Some((l, r)) = panner.step(&scene, dt) {
+            volume.set_balance(&app, l, r);
+        }
+        let deg = (bearing.to_degrees() + 540.0) % 360.0 - 180.0;
+        let side = match deg {
+            d if (-135.0..-45.0).contains(&d) => "left",
+            d if (-45.0..45.0).contains(&d) => "ahead",
+            d if (45.0..135.0).contains(&d) => "right",
+            _ => "behind",
+        };
+        if side != said {
+            let (l, r) = panner.gains();
+            println!("{side:>6}  left {l:.2}  right {r:.2}");
+            said = side.into();
+        }
+        std::thread::sleep(Duration::from_secs_f32(dt));
+    }
+    volume.restore(&app);
+    println!("volume and balance put back");
 }
 
 #[cfg(not(windows))]

@@ -10,8 +10,8 @@ use std::collections::HashMap;
 
 use windows::Win32::Foundation::CloseHandle;
 use windows::Win32::Media::Audio::{
-    IAudioSessionControl2, IAudioSessionManager2, IMMDeviceEnumerator, ISimpleAudioVolume,
-    MMDeviceEnumerator, eMultimedia, eRender,
+    IAudioSessionControl2, IAudioSessionManager2, IChannelAudioVolume, IMMDeviceEnumerator,
+    ISimpleAudioVolume, MMDeviceEnumerator, eMultimedia, eRender,
 };
 use windows::Win32::System::Com::{
     CLSCTX_ALL, COINIT_MULTITHREADED, CoCreateInstance, CoInitializeEx,
@@ -26,6 +26,8 @@ use crate::apps::matches;
 pub struct AppVolume {
     /// Each session's level before we changed it, by process id.
     saved: HashMap<u32, f32>,
+    /// Each session's channel levels before we changed them (the balance).
+    saved_channels: HashMap<u32, Vec<f32>>,
 }
 
 impl AppVolume {
@@ -36,6 +38,7 @@ impl AppVolume {
         let _ = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) };
         Self {
             saved: HashMap::new(),
+            saved_channels: HashMap::new(),
         }
     }
 
@@ -100,12 +103,63 @@ impl AppVolume {
         n
     }
 
+    /// Sets the app's balance: `left` and `right` levels (0 to 1) of its
+    /// channels (even ones left, odd ones right), on top of its own, saved
+    /// the first time. Returns how many of its sessions took it.
+    pub fn set_balance(&mut self, app: &str, left: f32, right: f32) -> usize {
+        let Ok(sessions) = Self::sessions(app) else {
+            return 0;
+        };
+        let mut n = 0;
+        for (pid, volume) in sessions {
+            let Ok(channels) = volume.cast::<IChannelAudioVolume>() else {
+                continue;
+            };
+            // SAFETY: a live session's channel volume interface; indices
+            // below its channel count.
+            unsafe {
+                let Ok(count) = channels.GetChannelCount() else {
+                    continue;
+                };
+                let own = self.saved_channels.entry(pid).or_insert_with(|| {
+                    (0..count)
+                        .map(|i| channels.GetChannelVolume(i).unwrap_or(1.0))
+                        .collect()
+                });
+                let mut ok = true;
+                for i in 0..count {
+                    let g = if i % 2 == 0 { left } else { right };
+                    let base = own.get(i as usize).copied().unwrap_or(1.0);
+                    ok &= channels
+                        .SetChannelVolume(i, base * g.clamp(0.0, 1.0), std::ptr::null())
+                        .is_ok();
+                }
+                n += usize::from(ok);
+            }
+        }
+        n
+    }
+
+    /// Puts back a session's channel levels, if we changed them.
+    fn restore_channels(&mut self, pid: u32, volume: &ISimpleAudioVolume) {
+        let Some(own) = self.saved_channels.remove(&pid) else {
+            return;
+        };
+        if let Ok(channels) = volume.cast::<IChannelAudioVolume>() {
+            for (i, level) in own.into_iter().enumerate() {
+                // SAFETY: a live session's channel volume interface.
+                let _ = unsafe { channels.SetChannelVolume(i as u32, level, std::ptr::null()) };
+            }
+        }
+    }
+
     /// Puts back every level changed for `app`.
     pub fn restore(&mut self, app: &str) {
         let Ok(sessions) = Self::sessions(app) else {
             return;
         };
         for (pid, volume) in sessions {
+            self.restore_channels(pid, &volume);
             if let Some(own) = self.saved.remove(&pid) {
                 // SAFETY: a live session's volume interface.
                 let _ = unsafe { volume.SetMasterVolume(own, std::ptr::null()) };
@@ -115,7 +169,7 @@ impl AppVolume {
 
     /// Puts back every level we changed, whatever app it belonged to.
     fn restore_all(&mut self) {
-        if self.saved.is_empty() {
+        if self.saved.is_empty() && self.saved_channels.is_empty() {
             return;
         }
         // Any app: match every session by process id instead of name.
@@ -142,6 +196,7 @@ impl AppVolume {
             })()
         };
         for (pid, volume) in all.unwrap_or_default() {
+            self.restore_channels(pid, &volume);
             if let Some(own) = self.saved.remove(&pid) {
                 // SAFETY: a live session's volume interface.
                 let _ = unsafe { volume.SetMasterVolume(own, std::ptr::null()) };
