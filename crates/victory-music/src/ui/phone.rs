@@ -476,11 +476,11 @@ impl<'a> Painter<'a> {
                     py - oy,
                     px - ox + ps,
                     py - oy + ps,
-                    &[(0.0, rgb(PINK, 0.55)), (1.0, rgb(PURPLE, 0.55))],
+                    &[(0.0, rgb(PINK, 0.35)), (1.0, rgb(PURPLE, 0.35))],
                 );
                 draw::fill(
                     l,
-                    draw::rounded(px - ox, py - oy + rr * 0.5, ps, ps, rr),
+                    draw::rounded(px - ox, py - oy, ps, ps, rr),
                     &halo,
                 );
             },
