@@ -6,6 +6,12 @@
 //!   cargo run -p victory-music --example phone_preview -- out.png [cover.jpg] [paused|empty]
 //! ```
 //!
+//! On Windows, `live` draws what Spotify plays now, cover included:
+//!
+//! ```text
+//! cargo run -p victory-music --example phone_preview -- phone.png - live
+//! ```
+//!
 //! The overlay alone (transparent around the phone) goes to `out.overlay.png`.
 
 use tiny_skia::{Pixmap, PixmapPaint, Transform};
@@ -24,12 +30,16 @@ fn main() {
         .filter(|p| !p.is_empty() && p != "-")
         .map(|p| std::fs::read(p).expect("cover"))
         .or_else(|| stand_in_cover().encode_png().ok());
-    let track = (mode != "empty").then(|| Track {
-        title: "Noite em Leonida (Remix)".into(),
-        artist: "Artista de Exemplo".into(),
-        playing: mode != "paused",
-        cover,
-    });
+    let track = if mode == "live" {
+        live()
+    } else {
+        (mode != "empty").then(|| Track {
+            title: "Noite em Leonida (Remix)".into(),
+            artist: "Artista de Exemplo".into(),
+            playing: mode != "paused",
+            cover,
+        })
+    };
     let state = PhoneState {
         open: 1.0,
         clock: "21:47".into(),
@@ -61,6 +71,28 @@ fn main() {
     );
     frame.save_png(&out).expect("save");
     eprintln!("saved {out}");
+}
+
+/// What Spotify plays now.
+#[cfg(windows)]
+fn live() -> Option<Track> {
+    let media = victory_music::media::Media::new().ok()?;
+    let now = media.now_playing(true);
+    if now.is_none() {
+        eprintln!("Spotify is not open (or has not played anything yet)");
+    }
+    now.map(|n| Track {
+        title: n.title,
+        artist: n.artist,
+        playing: n.playing,
+        cover: n.cover,
+    })
+}
+
+#[cfg(not(windows))]
+fn live() -> Option<Track> {
+    eprintln!("live needs Windows (Spotify through the media controls)");
+    None
 }
 
 /// A night street of our own drawing, to see the phone over something.
