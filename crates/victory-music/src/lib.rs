@@ -11,6 +11,7 @@
 
 pub mod apps;
 pub mod mix;
+pub mod ui;
 
 #[cfg(windows)]
 pub mod media;

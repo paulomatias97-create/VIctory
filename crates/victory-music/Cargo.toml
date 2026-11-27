@@ -23,3 +23,8 @@ windows-future = "0.3.2"
 
 [lints]
 workspace = true
+
+[dependencies]
+fontdue = "0.9.5"
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
+tiny-skia = "0.12.0"
