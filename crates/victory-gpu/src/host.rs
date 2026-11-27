@@ -3285,6 +3285,8 @@ impl Host {
             };
             p.copy.reset();
             let list = &p.copy.list;
+            // Our overlay's new pixels, ahead of the composition that draws it.
+            crate::overlay::record(list);
             let (capture, probe) = if planes.len() == 1 {
                 let (texture, state) = planes[0];
                 let state = D3D12_RESOURCE_STATES(state as i32);

@@ -41,6 +41,8 @@ pub mod list;
 #[cfg(windows)]
 mod memory;
 pub mod object;
+#[cfg(windows)]
+pub mod overlay;
 pub mod pipeline;
 #[cfg(windows)]
 mod placement;

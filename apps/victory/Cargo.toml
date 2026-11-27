@@ -15,6 +15,7 @@ victory-hle.workspace = true
 victory-gpu.workspace = true
 victory-shader = { workspace = true, features = ["host"] }
 victory-game.workspace = true
+victory-music = { path = "../../crates/victory-music" }
 anyhow.workspace = true
 blake3.workspace = true
 memchr.workspace = true

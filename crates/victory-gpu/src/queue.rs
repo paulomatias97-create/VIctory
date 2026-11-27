@@ -563,10 +563,18 @@ extern "system" fn present(
             }
         }
         if !resources.is_empty() {
-            let sources: Vec<(&_, u32)> = resources
+            // Ours over the title's planes (the phone), at the size of its
+            // first plane.
+            // SAFETY: a live resource.
+            let first = unsafe { resources[0].1.GetDesc() };
+            let overlay = crate::overlay::prepare(host, first.Width as u32, first.Height);
+            let mut sources: Vec<(&_, u32)> = resources
                 .iter()
                 .map(|(_, tex, state, _)| (tex, *state))
                 .collect();
+            if let Some(texture) = &overlay {
+                sources.push((texture, crate::overlay::STATE));
+            }
             let shown = host.present(&sources, frame);
             for &(resource, _, state, first) in &resources {
                 if first {

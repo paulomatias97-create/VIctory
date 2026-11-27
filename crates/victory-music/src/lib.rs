@@ -16,4 +16,6 @@ pub mod ui;
 #[cfg(windows)]
 pub mod media;
 #[cfg(windows)]
+pub mod service;
+#[cfg(windows)]
 pub mod volume;

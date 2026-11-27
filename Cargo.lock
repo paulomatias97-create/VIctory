@@ -869,6 +869,7 @@ dependencies = [
  "victory-gpu",
  "victory-hle",
  "victory-loader",
+ "victory-music",
  "victory-pe",
  "victory-shader",
  "walkdir",
@@ -952,6 +953,7 @@ dependencies = [
  "fontdue",
  "image",
  "tiny-skia",
+ "tracing",
  "windows",
  "windows-future",
 ]

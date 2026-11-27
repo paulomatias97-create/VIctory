@@ -17,7 +17,10 @@ windows = { workspace = true, features = [
     "Win32_System_Com",
     "Win32_System_Com_StructuredStorage",
     "Win32_System_Variant",
+    "Win32_System_SystemInformation",
     "Win32_System_Threading",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
 ] }
 windows-future = "0.3.2"
 
@@ -25,6 +28,7 @@ windows-future = "0.3.2"
 workspace = true
 
 [dependencies]
+tracing.workspace = true
 fontdue = "0.9.5"
 image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
 tiny-skia = "0.12.0"

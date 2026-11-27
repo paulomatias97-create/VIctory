@@ -58,6 +58,9 @@ pub fn run(
         victory_hle::modules::xmem::low_guards::install();
     }
     let cfg = victory_core::Config::load()?;
+    if execute && std::env::var_os("VICTORY_PHONE").is_some_and(|v| v != "0") {
+        start_phone();
+    }
     // Before the import registry is first used: it holds the module only
     // when the host's FidelityFX serves.
     victory_hle::modules::fidelityfx::use_host_dir(cfg.fidelityfx_dir.as_deref());
@@ -550,6 +553,50 @@ mod cpu_check_tests {
     fn skip_env_var_bypasses_missing_avx2() {
         assert!(check_cpu_features_with(false, Some("1")).is_ok());
     }
+}
+
+/// The Spotibuy phone over the title's frames (`VICTORY_PHONE=1`): F7
+/// opens it, F8 plays or pauses Spotify, F9 and F6 skip. Fonts from
+/// `VICTORY_FONTS_DIR` (Rubik and Inter), else the system's.
+#[cfg(windows)]
+fn start_phone() {
+    use std::sync::{Arc, Mutex};
+    use victory_gpu::overlay::{Picture, set_provider};
+    use victory_music::service::{Drawn, start};
+
+    let overlay = match start(None) {
+        Ok(o) => o,
+        Err(e) => {
+            tracing::warn!(error = %e, "phone not started");
+            return;
+        }
+    };
+    /// The last picture handed out: its serial, width, height.
+    type Last = Option<(u64, u32, u32, Arc<Picture>)>;
+    let last: Mutex<Last> = Mutex::new(None);
+    set_provider(move |width, height| {
+        let mut last = last.lock().unwrap_or_else(|e| e.into_inner());
+        let known = last
+            .as_ref()
+            .filter(|(_, w, h, _)| (*w, *h) == (width, height))
+            .map(|(serial, ..)| *serial);
+        match overlay.picture(width, height, known) {
+            Drawn::Hidden => None,
+            Drawn::Same => last.as_ref().map(|(.., p)| p.clone()),
+            Drawn::New(frame) => {
+                let picture = Arc::new(Picture {
+                    width,
+                    height,
+                    pixels: frame.pixels,
+                    changed: frame.changed,
+                    serial: frame.serial,
+                });
+                *last = Some((frame.serial, width, height, picture.clone()));
+                Some(picture)
+            }
+        }
+    });
+    tracing::info!("phone ready: F7 opens it");
 }
 
 #[cfg(not(windows))]
