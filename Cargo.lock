@@ -734,6 +734,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "victory-music"
+version = "0.1.0"
+dependencies = [
+ "windows",
+ "windows-future",
+]
+
+[[package]]
 name = "victory-pe"
 version = "0.1.0"
 dependencies = [
