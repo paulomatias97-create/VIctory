@@ -1,6 +1,6 @@
 [package]
 name = "victory-music"
-description = "The phone's music app: the player's own music app driven from the title, its volume following the scene."
+description = "The phone's music app: the player's Spotify driven from the title, its volume following the scene."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

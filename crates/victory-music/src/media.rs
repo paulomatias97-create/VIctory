@@ -1,8 +1,8 @@
-//! The player's music app through Windows' media controls (the panel the
-//! volume keys show): which app is playing, what it plays, its cover, and
-//! play, pause and skip. Any app that shows there works (Spotify, YouTube
-//! Music, Deezer, Apple Music, Amazon Music, a browser tab), with no
-//! account or key of ours.
+//! The player's Spotify app through Windows' media controls (the panel the
+//! volume keys show): what it plays, its cover, and play, pause and skip.
+//! Both the desktop app and the Microsoft Store one show there, with no
+//! account or key of ours. Other apps are left alone, even when they are
+//! the ones the system shows.
 
 use windows::Media::Control::{
     GlobalSystemMediaTransportControlsSession as Session,
@@ -12,24 +12,13 @@ use windows::Media::Control::{
 use windows::Storage::Streams::{Buffer, DataReader, InputStreamOptions};
 use windows::core::Result;
 
-/// Apps taken before the system's own pick of the current session: music
-/// first, a browser tab (often a video) last.
-const MUSIC_APPS: [&str; 8] = [
-    "spotify",
-    "deezer",
-    "applemusic",
-    "zunemusic",
-    "amazonmusic",
-    "tidal",
-    "youtube",
-    "soundcloud",
-];
+use crate::apps::is_spotify;
 
-/// What the music app is playing.
+/// What Spotify is playing.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct NowPlaying {
-    /// The app's id as Windows knows it (`Spotify.exe`,
-    /// `SpotifyAB.SpotifyMusic_...!Spotify`, `Chrome`, ...).
+    /// The app's id as Windows knows it (`Spotify.exe`, or
+    /// `SpotifyAB.SpotifyMusic_...!Spotify` from the Store).
     pub app: String,
     pub title: String,
     pub artist: String,
@@ -51,28 +40,18 @@ impl Media {
         })
     }
 
-    /// The session to drive: a known music app if one is open, else the
-    /// one the system shows.
+    /// Spotify's session, if it is open.
     fn session(&self) -> Option<Session> {
         let sessions = self.manager.GetSessions().ok()?;
-        let all: Vec<Session> = (0..sessions.Size().ok()?)
+        (0..sessions.Size().ok()?)
             .filter_map(|i| sessions.GetAt(i).ok())
-            .collect();
-        let rank = |s: &Session| {
-            let id = s
-                .SourceAppUserModelId()
-                .map(|h| h.to_string().to_lowercase());
-            id.ok()
-                .and_then(|id| MUSIC_APPS.iter().position(|app| id.contains(app)))
-        };
-        all.iter()
-            .filter_map(|s| rank(s).map(|r| (r, s)))
-            .min_by_key(|&(r, _)| r)
-            .map(|(_, s)| s.clone())
-            .or_else(|| self.manager.GetCurrentSession().ok())
+            .find(|s| {
+                s.SourceAppUserModelId()
+                    .is_ok_and(|id| is_spotify(&id.to_string()))
+            })
     }
 
-    /// What is playing, or `None` with no music app open.
+    /// What Spotify is playing, or `None` when it is not open.
     pub fn now_playing(&self, with_cover: bool) -> Option<NowPlaying> {
         let s = self.session()?;
         let props = s.TryGetMediaPropertiesAsync().ok()?.join().ok()?;
@@ -96,8 +75,7 @@ impl Media {
         })
     }
 
-    /// Sends `command` to the music app; `false` if there is none or it
-    /// refused.
+    /// Sends `command` to Spotify; `false` if it is not open or refused.
     pub fn command(&self, command: Command) -> bool {
         let Some(s) = self.session() else {
             return false;

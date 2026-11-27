@@ -1,4 +1,5 @@
-//! Tries the music app without the title, on Windows:
+//! Tries the phone's Spotify app without the title, on Windows (Spotify
+//! open and playing):
 //!
 //! ```text
 //! cargo run -p victory-music --example music_probe -- now
@@ -6,7 +7,7 @@
 //! cargo run -p victory-music --example music_probe -- scene
 //! ```
 //!
-//! `scene` plays a scripted minute against the real music app: the radio
+//! `scene` plays a scripted half minute against the real Spotify: the radio
 //! on in a vehicle, a line of dialogue, walking away, coming back, a pause.
 //! The app's own volume is put back at the end; stopping it early with
 //! Ctrl+C leaves the level it had then (set it back in the volume mixer).
@@ -31,7 +32,7 @@ fn main() {
             n.cover
                 .map_or("none".into(), |c| format!("{} bytes", c.len()))
         ),
-        None => println!("no music app open: start Spotify, YouTube Music, Deezer..."),
+        None => println!("Spotify is not open (or has not played anything yet)"),
     };
     let command = match what.as_str() {
         "next" => Some(Command::Next),
@@ -116,7 +117,7 @@ fn main() {
             if let Some(level) = mixer.step(&scene, dt) {
                 let n = volume.set(&app, level);
                 if n == 0 {
-                    println!("  (the app's volume could not be found in the mixer)");
+                    println!("  (Spotify's volume could not be found in the mixer)");
                 }
             }
             std::thread::sleep(Duration::from_secs_f32(dt));

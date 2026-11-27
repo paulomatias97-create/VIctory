@@ -5,7 +5,7 @@
 //! back.
 //!
 //! Nothing here touches the audio itself: the level is applied as the
-//! volume of the player's music app (see `volume`), so streamed music is
+//! volume of the player's Spotify (see `volume`), so its music is
 //! only ever made louder or quieter.
 
 /// What the title is doing, as far as the music cares.
