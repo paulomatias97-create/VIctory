@@ -15,7 +15,7 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_F6, VK_F7
 use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
 
 use crate::media::{Command, Media};
-use crate::mix::{Mixer, Scene, Settings};
+use crate::mix::{Mixer, Scene, Settings, label};
 use crate::space::Panner;
 use crate::ui::{Fonts, Phone, PhoneState, Track};
 use crate::volume::AppVolume;
@@ -84,9 +84,21 @@ impl Overlay {
     }
 }
 
+/// Where the scene comes from: the title (through its adapter), the
+/// simulator, or nothing yet (the music as loud as the player left it).
+pub type SceneSource = Box<dyn FnMut() -> Scene + Send>;
+
+/// The scene when nothing reads it: in a vehicle, nothing going on.
+pub fn no_scene() -> SceneSource {
+    Box::new(Scene::default)
+}
+
 /// Starts the phone's thread. `fonts_dir`: where Rubik and Inter are (else
-/// `VICTORY_FONTS_DIR`, else the system's fonts).
-pub fn start(fonts_dir: Option<&std::path::Path>) -> Result<Arc<Overlay>, String> {
+/// `VICTORY_FONTS_DIR`, else the system's fonts); `scene`: asked every tick.
+pub fn start(
+    fonts_dir: Option<&std::path::Path>,
+    scene: SceneSource,
+) -> Result<Arc<Overlay>, String> {
     let fonts = Fonts::load(fonts_dir)?;
     let shared = Arc::new(Mutex::new(Shared {
         state: PhoneState {
@@ -102,12 +114,12 @@ pub fn start(fonts_dir: Option<&std::path::Path>) -> Result<Arc<Overlay>, String
     });
     std::thread::Builder::new()
         .name("victory-phone".into())
-        .spawn(move || run(&shared))
+        .spawn(move || run(&shared, scene))
         .map_err(|e| e.to_string())?;
     Ok(overlay)
 }
 
-fn run(shared: &Mutex<Shared>) {
+fn run(shared: &Mutex<Shared>, mut source: SceneSource) {
     let media = match Media::new() {
         Ok(m) => Some(m),
         Err(e) => {
@@ -184,16 +196,14 @@ fn run(shared: &Mutex<Shared>) {
             }
         }
 
-        // Spotify's volume from the scene. The scene is not read from the
-        // title yet: the music is as loud as the player left it.
-        let scene = Scene::default();
+        // Spotify's volume and balance from the scene.
+        let scene = source();
         if let Some(level) = mixer.step(&scene, dt)
             && !app.is_empty()
         {
             volume.set(&app, level);
         }
-        // Where the music comes from: the camera and the vehicle are not
-        // read from the title yet, so the balance stays centred.
+        // Where the music comes from.
         if let Some((left, right)) = panner.step(&scene, dt)
             && !app.is_empty()
         {
@@ -215,7 +225,7 @@ fn run(shared: &Mutex<Shared>) {
             clock: clock(),
             track: track.clone(),
             level: mixer.level(),
-            scene: "Livre".into(),
+            scene: label(&scene),
             time: started.elapsed().as_secs_f32() - opened_at,
         };
         let moving = open > 0.0 && state.track.as_ref().is_some_and(|t| t.playing);

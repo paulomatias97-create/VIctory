@@ -27,6 +27,15 @@ A phone laid over the title's picture that drives the player's own Spotify
 
 ## Without the title
 
+The simulator stands in for the title: a city seen from above, a car, the
+player. Drive (W A S D), get out (E), walk around the car, take a call (T),
+pause (P), and open the phone (F7): Spotify's volume and balance and the
+phone on screen do what they will do in the game.
+
+```powershell
+cargo run --release -p victory-music --example leonida_sim
+```
+
 ```powershell
 cargo run -p victory-music --example music_probe -- now     # what Spotify plays
 cargo run -p victory-music --example music_probe -- scene   # Spotify's volume following a scripted scene

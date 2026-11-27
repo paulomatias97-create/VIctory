@@ -562,9 +562,10 @@ mod cpu_check_tests {
 fn start_phone() {
     use std::sync::{Arc, Mutex};
     use victory_gpu::overlay::{Picture, set_provider};
-    use victory_music::service::{Drawn, start};
+    use victory_music::service::{Drawn, no_scene, start};
 
-    let overlay = match start(None) {
+    // The scene is not read from the title yet.
+    let overlay = match start(None, no_scene()) {
         Ok(o) => o,
         Err(e) => {
             tracing::warn!(error = %e, "phone not started");

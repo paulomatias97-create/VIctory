@@ -95,6 +95,19 @@ pub fn target(s: &Settings, scene: &Scene) -> f32 {
     g.clamp(0.0, 1.0)
 }
 
+/// The scene in a few words, for the phone.
+pub fn label(scene: &Scene) -> String {
+    if scene.paused {
+        "Pausado".into()
+    } else if scene.dialogue {
+        "Diálogo".into()
+    } else if scene.in_vehicle {
+        "No carro".into()
+    } else {
+        format!("A {:.0} m do carro", scene.distance)
+    }
+}
+
 /// The level as it glides towards the scene's target.
 #[derive(Debug, Clone)]
 pub struct Mixer {

@@ -24,6 +24,9 @@ windows = { workspace = true, features = [
 ] }
 windows-future = "0.3.2"
 
+[target.'cfg(windows)'.dev-dependencies]
+minifb = "0.29.0"
+
 [lints]
 workspace = true
 
